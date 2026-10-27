@@ -26,6 +26,11 @@ interface RawGame {
   black: RawPlayer;
 }
 
+/** API data ends up in href/src attributes, so only let plain https links through. */
+function httpsOnly(url: unknown): string | undefined {
+  return typeof url === 'string' && url.startsWith('https://') ? url : undefined;
+}
+
 async function getJson(url: string, attempt = 0): Promise<any> {
   const res = await fetch(url);
   if (res.status === 429 && attempt < 4) {
@@ -40,7 +45,7 @@ async function getJson(url: string, attempt = 0): Promise<any> {
 export async function fetchProfile(username: string): Promise<{ username: string; avatar?: string }> {
   const p = await getJson(`${API}/${username.toLowerCase()}`);
   if (!p) throw new Error('Player not found on chess.com');
-  return { username: p.username ?? username, avatar: p.avatar };
+  return { username: p.username ?? username, avatar: httpsOnly(p.avatar) };
 }
 
 export async function fetchArchives(username: string): Promise<string[]> {
@@ -71,7 +76,8 @@ function outcome(result: string): Outcome {
 }
 
 export function toGame(raw: RawGame, username: string): Game | null {
-  if (raw.rules !== 'chess' || !raw.pgn) return null;
+  const url = httpsOnly(raw.url);
+  if (raw.rules !== 'chess' || !raw.pgn || !url) return null;
   if (raw.initial_setup && raw.initial_setup !== START_FEN) return null;
   const user = username.toLowerCase();
   const color: Color = raw.white.username.toLowerCase() === user ? 'white' : 'black';
@@ -95,8 +101,8 @@ export function toGame(raw: RawGame, username: string): Game | null {
   const eco = /\[ECO "([^"]*)"\]/.exec(raw.pgn)?.[1] ?? '';
   const { family, line } = parseOpening(raw.eco);
   return {
-    id: raw.uuid ?? raw.url,
-    url: raw.url,
+    id: raw.uuid ?? url,
+    url,
     end: raw.end_time,
     timeClass: raw.time_class as TimeClass,
     rated: raw.rated,
