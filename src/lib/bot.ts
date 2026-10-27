@@ -1,4 +1,3 @@
-import { Chess } from 'chess.js';
 import { engine, evalCp, MIN_UCI_ELO } from './engine';
 import { sortedChildren, type TreeNode } from './tree';
 
@@ -39,27 +38,27 @@ export function historyMove(node: TreeNode | null, nemesis: number): TreeNode | 
 }
 
 /**
- * Stockfish limits itself well from 1320 up. Below that we take its top few moves
- * at low depth and sample them with a temperature that grows as the rating drops,
- * plus the odd outright random move at the very bottom.
+ * Stockfish limits itself well from 1320 up. Below that we sample its top moves,
+ * but only those within `maxLoss` of the best: low-rated players drop the odd pawn
+ * or piece, yet they don't ignore a free queen or walk away from a recapture.
  */
 export async function engineMove(fen: string, elo: number): Promise<string> {
   if (elo >= MIN_UCI_ELO) {
     const { best } = await engine.search(fen, { multipv: 1, elo, go: 'go movetime 700' });
     return best;
   }
-  const legal = new Chess(fen).moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion ?? ''));
-  if (Math.random() < Math.max(0, (900 - elo) / 2500)) return legal[Math.floor(Math.random() * legal.length)];
-
-  const { lines, best } = await engine.search(fen, { multipv: 5, go: 'go depth 8' });
+  const { lines, best } = await engine.search(fen, { multipv: 6, go: 'go depth 10' });
   if (!lines.length) return best;
   const sign = fen.split(' ')[1] === 'w' ? 1 : -1;
-  const scores = lines.map((l) => sign * evalCp(l));
-  const top = Math.max(...scores);
-  const temp = 40 + (MIN_UCI_ELO - elo) * 0.35;
+  const scored = lines.map((l) => ({ uci: l.pv[0], s: sign * evalCp(l) }));
+  const top = Math.max(...scored.map((m) => m.s));
+  const below = MIN_UCI_ELO - elo; // 0 at 1320, 920 at 400
+  const maxLoss = 60 + below * 0.25; // ≈190cp at 800: a pawn or two, never a queen
+  const temp = 25 + below * 0.1;
+  const ok = scored.filter((m) => top - m.s <= maxLoss);
   return pick(
-    lines.map((l) => l.pv[0]),
-    scores.map((s) => Math.exp((s - top) / temp)),
+    ok.map((m) => m.uci),
+    ok.map((m) => Math.exp((m.s - top) / temp)),
   );
 }
 
