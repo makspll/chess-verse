@@ -11,7 +11,7 @@ import { sfx } from '../lib/sound';
 import { buildTree, moveLabel, sortedChildren, walk, winRate, type TreeNode } from '../lib/tree';
 import type { Color, Game } from '../lib/types';
 import { go } from '../router';
-import { applyFilters, useStore } from '../store';
+import { activeFilterCount, applyFilters, useStore } from '../store';
 
 interface EngineSettings {
   on: boolean;
@@ -273,6 +273,7 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
         <div className="grow" />
         <button className={'tool' + (showFilters ? ' on' : '')} onClick={() => setShowFilters(!showFilters)}>
           Filters
+          {activeFilterCount(filters) > 0 && <span className="badge">{activeFilterCount(filters)}</span>}
         </button>
         <button
           className={'tool engine' + (eng.on ? ' on' : '')}

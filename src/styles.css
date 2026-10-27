@@ -1244,3 +1244,61 @@ input:focus {
   gap: 10px;
   margin-top: 10px;
 }
+
+/* Opponent rating range */
+
+.rating-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--side);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.rating-range.on {
+  border-color: rgba(154, 140, 255, 0.45);
+}
+
+.rating-range input {
+  width: 52px;
+  padding: 5px 4px;
+  border: 0;
+  background: none;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.rating-range input:focus {
+  box-shadow: none;
+  color: var(--text);
+}
+
+.rating-range .clear {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.rating-range .clear:hover {
+  background: var(--card-2);
+  color: var(--text);
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #111215;
+  font-size: 11px;
+  font-weight: 700;
+}

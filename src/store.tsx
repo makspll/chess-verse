@@ -10,6 +10,9 @@ export interface Filters {
   timeClasses: TimeClass[];
   rated: 'all' | 'rated' | 'casual';
   period: Period;
+  /** Opponent rating bounds, inclusive; null = open-ended. */
+  oppMin: number | null;
+  oppMax: number | null;
 }
 
 export interface SyncProgress {
@@ -20,7 +23,13 @@ export interface SyncProgress {
   failed: number;
 }
 
-const DEFAULT_FILTERS: Filters = { timeClasses: [...TIME_CLASSES], rated: 'all', period: 'all' };
+const DEFAULT_FILTERS: Filters = {
+  timeClasses: [...TIME_CLASSES],
+  rated: 'all',
+  period: 'all',
+  oppMin: null,
+  oppMax: null,
+};
 
 const PERIOD_DAYS: Record<Period, number> = { all: Infinity, '1y': 365, '6m': 182, '3m': 91, '1m': 30 };
 
@@ -31,13 +40,25 @@ async function loadSorted(): Promise<Game[]> {
   return games.sort((a, b) => b.end - a.end);
 }
 
+/** Number of filters narrowing the game set, for a badge on the Filters button. */
+export function activeFilterCount(f: Filters): number {
+  return (
+    Number(f.timeClasses.length < TIME_CLASSES.length) +
+    Number(f.period !== 'all') +
+    Number(f.rated !== 'all') +
+    Number(f.oppMin !== null || f.oppMax !== null)
+  );
+}
+
 export function applyFilters(games: Game[], f: Filters): Game[] {
   const since = f.period === 'all' ? 0 : Date.now() / 1000 - PERIOD_DAYS[f.period] * 86400;
   return games.filter(
     (g) =>
       f.timeClasses.includes(g.timeClass) &&
       g.end >= since &&
-      (f.rated === 'all' || (f.rated === 'rated') === g.rated),
+      (f.rated === 'all' || (f.rated === 'rated') === g.rated) &&
+      (f.oppMin === null || g.oppRating >= f.oppMin) &&
+      (f.oppMax === null || g.oppRating <= f.oppMax),
   );
 }
 
