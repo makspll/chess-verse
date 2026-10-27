@@ -1,10 +1,10 @@
 const STOPS: [number, [number, number, number]][] = [
-  [0.3, [224, 90, 71]],
-  [0.5, [214, 170, 62]],
-  [0.7, [129, 182, 76]],
+  [0.3, [232, 112, 96]],
+  [0.5, [222, 178, 92]],
+  [0.7, [78, 192, 146]],
 ];
 
-/** Red → amber → green for a 0..1 win rate. */
+/** Coral → sand → mint for a 0..1 win rate. */
 export function rateColor(r: number): string {
   if (r <= STOPS[0][0]) return `rgb(${STOPS[0][1].join(',')})`;
   for (let i = 1; i < STOPS.length; i++) {
@@ -18,7 +18,7 @@ export function rateColor(r: number): string {
   return `rgb(${STOPS[STOPS.length - 1][1].join(',')})`;
 }
 
-export const ENGINE_COLOR = 'rgb(76, 160, 230)';
+export const ENGINE_COLOR = 'rgb(95, 180, 255)';
 
 export function pct(x: number): string {
   return `${Math.round(x * 100)}%`;

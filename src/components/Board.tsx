@@ -292,8 +292,8 @@ export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, 
                 height={a.sublabel ? 46 : 32}
                 rx={8}
                 fill={a.color}
-                stroke="rgba(0,0,0,0.45)"
-                strokeWidth={2.5}
+                stroke="rgba(17,18,21,0.55)"
+                strokeWidth={2}
               />
               <text y={6} textAnchor="middle" className="label-main">
                 {a.label}
@@ -320,9 +320,9 @@ export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, 
 
       <defs>
         <radialGradient id="check">
-          <stop offset="0%" stopColor="#ff2a2a" stopOpacity="0.95" />
-          <stop offset="45%" stopColor="#e00" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#b00" stopOpacity="0" />
+          <stop offset="0%" stopColor="#ff6a55" stopOpacity="0.95" />
+          <stop offset="50%" stopColor="#e4503c" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#c43a2a" stopOpacity="0" />
         </radialGradient>
       </defs>
     </svg>

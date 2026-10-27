@@ -231,7 +231,7 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
           to: c.uci.slice(2, 4),
           color: rateColor(winRate(c)),
           width: 7 + 22 * freq,
-          opacity: focus ? (focused ? 0.95 : 0.1) : 0.62,
+          opacity: focus ? (focused ? 0.95 : 0.12) : 0.78,
           label: focused ? pct(winRate(c)) : undefined,
           sublabel: focused ? `${c.n} game${c.n === 1 ? '' : 's'}` : undefined,
         });
