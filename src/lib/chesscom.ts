@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { parseOpening } from './openings';
+import { openingOf } from './openings';
 import { MAX_PLY, type Color, type Game, type Outcome, type TimeClass } from './types';
 
 const API = 'https://api.chess.com/pub/player';
@@ -99,7 +99,7 @@ export function toGame(raw: RawGame, username: string): Game | null {
   }
 
   const eco = /\[ECO "([^"]*)"\]/.exec(raw.pgn)?.[1] ?? '';
-  const { family, line } = parseOpening(raw.eco);
+  const { family, line } = openingOf(raw.eco, sans);
   return {
     id: raw.uuid ?? url,
     url,

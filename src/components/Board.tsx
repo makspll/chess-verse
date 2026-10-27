@@ -31,6 +31,8 @@ interface Props {
   onMove: (uci: string, dragged: boolean) => void;
   /** Slide the piece now on `anim.to` in from `anim.from` when the fen changes. */
   anim?: BoardAnim | null;
+  /** Only pieces of this colour can be picked up (e.g. while a bot is to move). */
+  allow?: Color;
 }
 
 const FILES = 'abcdefgh';
@@ -79,7 +81,7 @@ function arrowGeometry(a: BoardArrow, o: Color) {
   };
 }
 
-export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, onMove, anim }: Props) {
+export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, onMove, anim, allow }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const pieceRefs = useRef(new Map<string, SVGGElement>());
   const [drag, setDrag] = useState<{ from: string; x: number; y: number; active: boolean; wasSelected: boolean } | null>(
@@ -148,7 +150,7 @@ export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, 
     if (!sq) return;
     if (selected && selected !== sq && tryMove(selected, sq, false)) return;
     const p = chess.get(sq as Square);
-    if (p && (p.color === 'w' ? 'white' : 'black') === turn) {
+    if (p && (p.color === 'w' ? 'white' : 'black') === turn && (!allow || allow === turn)) {
       (e.target as Element).setPointerCapture?.(e.pointerId);
       setDrag({ from: sq, x, y, active: false, wasSelected: selected === sq });
       if (selected !== sq) onSelect(sq);

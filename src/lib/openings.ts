@@ -18,8 +18,40 @@ const PRETTY: Record<string, string> = {
   Grobs: "Grob's",
 };
 
-export function parseOpening(url?: string): { family: string; line: string } {
-  if (!url) return { family: 'Unknown', line: '' };
+// Chess.com tags offbeat starts as ".../openings/Undefined"; name those by White's first move.
+const FIRST_MOVE: Record<string, string> = {
+  a3: "Anderssen's Opening",
+  a4: 'Ware Opening',
+  b3: 'Nimzo-Larsen Attack',
+  b4: 'Polish Opening',
+  c3: 'Saragossa Opening',
+  d3: 'Mieses Opening',
+  e3: "Van't Kruijs Opening",
+  f3: 'Barnes Opening',
+  f4: "Bird's Opening",
+  g3: 'Hungarian Opening',
+  g4: 'Grob Opening',
+  h3: 'Clemenz Opening',
+  h4: 'Kádas Opening',
+  Na3: 'Durkin Opening',
+  Nc3: 'Van Geet Opening',
+  Nh3: 'Amar Opening',
+};
+
+function fromMoves(sans: string[]): { family: string; line: string } {
+  if (!sans.length) return { family: 'No moves', line: '' };
+  const line = `1.${sans[0]}${sans[1] ? ` ${sans[1]}` : ''}`;
+  return { family: FIRST_MOVE[sans[0]] ?? 'Uncommon Opening', line };
+}
+
+/** Family/line for a game, falling back to its moves when chess.com has no name. */
+export function openingOf(url: string | undefined, sans: string[]): { family: string; line: string } {
+  const o = parseOpening(url);
+  return o ? o : fromMoves(sans);
+}
+
+function parseOpening(url?: string): { family: string; line: string } | null {
+  if (!url) return null;
   const slug = decodeURIComponent(url.split('/openings/')[1] ?? '');
   const words: string[] = [];
   for (const w of slug.split('-')) {
@@ -33,7 +65,7 @@ export function parseOpening(url?: string): { family: string; line: string } {
     }
     words.push(PRETTY[w] ?? w);
   }
-  if (!words.length) return { family: 'Unknown', line: '' };
+  if (!words.length || words[0] === 'Undefined') return null;
   let cut = words.findIndex((w) => FAMILY_END.has(w));
   if (cut === -1) return { family: words.join(' '), line: '' };
   if (FAMILY_SUFFIX.has(words[cut + 1])) cut++;

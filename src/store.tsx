@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { fetchArchives, fetchMonth, fetchProfile, isPastMonth, monthLabel, toGame } from './lib/chesscom';
-import { parseOpening } from './lib/openings';
+import { openingOf } from './lib/openings';
 import { clearAll, loadGames, loadProfile, putGames, saveProfile } from './lib/db';
 import { TIME_CLASSES, type Game, type Profile, type TimeClass } from './lib/types';
 
@@ -27,7 +27,7 @@ const PERIOD_DAYS: Record<Period, number> = { all: Infinity, '1y': 365, '6m': 18
 /** Re-derive opening names so naming fixes apply without a reimport. */
 async function loadSorted(): Promise<Game[]> {
   const games = await loadGames();
-  for (const g of games) if (g.ecoUrl) Object.assign(g, parseOpening(g.ecoUrl));
+  for (const g of games) Object.assign(g, openingOf(g.ecoUrl, g.sans));
   return games.sort((a, b) => b.end - a.end);
 }
 

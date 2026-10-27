@@ -1,9 +1,10 @@
-import { Chess } from 'chess.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Board, type BoardAnim, type BoardArrow } from '../components/Board';
 import { PieceIcon } from '../components/pieces';
+import { Practice } from '../components/Practice';
 import { TreeGraph } from '../components/TreeGraph';
 import { Empty, FilterBar, Segmented, WDLBar } from '../components/ui';
+import { moveSound, pvSan, replay, sanOf } from '../lib/chessutil';
 import { ENGINE_COLOR, pct, rateColor } from '../lib/colors';
 import { engine, formatEval, type EngineLine } from '../lib/engine';
 import { sfx } from '../lib/sound';
@@ -24,49 +25,6 @@ function readJson<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
-}
-
-/** Replays a path of UCI moves; stops at the first illegal one. */
-function replay(path: string[]) {
-  const chess = new Chess();
-  const sans: string[] = [];
-  for (const uci of path) {
-    try {
-      sans.push(chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).san);
-    } catch {
-      break;
-    }
-  }
-  return { fen: chess.fen(), sans, turn: (chess.turn() === 'w' ? 'white' : 'black') as Color };
-}
-
-function sanOf(fen: string, uci: string): string {
-  try {
-    return new Chess(fen).move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).san;
-  } catch {
-    return uci;
-  }
-}
-
-function pvSan(fen: string, pv: string[], max = 6): string {
-  const c = new Chess(fen);
-  const out: string[] = [];
-  for (const uci of pv.slice(0, max)) {
-    try {
-      const ply = (c.moveNumber() - 1) * 2 + (c.turn() === 'w' ? 1 : 2);
-      const m = c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
-      out.push(out.length === 0 || ply % 2 === 1 ? moveLabel(ply, m.san) : m.san);
-    } catch {
-      break;
-    }
-  }
-  return out.join(' ');
-}
-
-function moveSound(san: string) {
-  if (san.includes('+') || san.includes('#')) sfx.check();
-  else if (san.includes('x')) sfx.capture();
-  else sfx.move();
 }
 
 /** Name shown for a position: only when most games here agree on it. */
@@ -101,6 +59,8 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
   const [showFilters, setShowFilters] = useState(false);
   const [eng, setEng] = useState<EngineSettings>(() => readJson('engine', { on: false, lines: 3, depth: 16 }));
   const [lines, setLines] = useState<EngineLine[]>([]);
+  /** Start position of a bot game, or null while exploring. */
+  const [practice, setPractice] = useState<string[] | null>(null);
 
   useEffect(() => localStorage.setItem('side', color), [color]);
   useEffect(() => localStorage.setItem('view', view), [view]);
@@ -160,13 +120,14 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
   // Engine
   useEffect(() => {
     setLines([]);
+    if (practice) return;
     if (!eng.on) {
       engine.stop();
       return;
     }
     const t = setTimeout(() => engine.analyse(pos.fen, eng.lines, eng.depth, setLines), 120);
     return () => clearTimeout(t);
-  }, [pos.fen, eng]);
+  }, [pos.fen, eng, practice]);
   useEffect(() => () => engine.stop(), []);
 
   const play = useCallback(
@@ -206,6 +167,7 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
+      if (practice) return;
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return;
       if (e.key === 'ArrowLeft') back();
       else if (e.key === 'ArrowRight') forward();
@@ -217,7 +179,7 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);
-  }, [back, forward, jump]);
+  }, [back, forward, jump, practice]);
 
   const arrows = useMemo(() => {
     const out: BoardArrow[] = [];
@@ -268,6 +230,23 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
             Import from chess.com
           </button>
         </Empty>
+      </div>
+    );
+  }
+
+  if (practice) {
+    return (
+      <div className="page train">
+        <Practice
+          key={practice.join(' ')}
+          tree={tree}
+          startPath={practice}
+          color={color}
+          onExit={(p) => {
+            setPractice(null);
+            jump(p);
+          }}
+        />
       </div>
     );
   }
@@ -356,6 +335,16 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
           </div>
           <div className="board-nav">
             <span className={'turn ' + (myTurn ? 'me' : 'them')}>{myTurn ? 'Your move' : 'Their reply'}</span>
+            <button
+              className="btn small accent"
+              onClick={() => {
+                sfx.success();
+                setPractice(path);
+              }}
+              title="Play the rest of the game from here against a bot"
+            >
+              Practice vs bot
+            </button>
             <div className="grow" />
             <button className="icon-btn" onClick={() => { sfx.back(); jump([]); }} title="Start (↑)" disabled={!path.length}>
               <svg viewBox="0 0 24 24"><path d="M6 5v14M19 5l-9 7 9 7z" /></svg>

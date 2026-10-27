@@ -1101,3 +1101,146 @@ input:focus {
     grid-template-columns: 80px 80px 1fr 40px;
   }
 }
+
+/* Practice vs bot */
+
+.btn.accent {
+  background: var(--accent-soft);
+  border-color: rgba(154, 140, 255, 0.35);
+  color: var(--accent);
+  margin-left: 6px;
+}
+
+.btn.accent:hover:not(:disabled) {
+  background: rgba(154, 140, 255, 0.22);
+  border-color: rgba(154, 140, 255, 0.5);
+}
+
+.practice-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.practice-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.practice-settings label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.practice-settings strong {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.practice-settings input[type='range'] {
+  grid-column: 1 / -1;
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--accent);
+  box-shadow: none;
+}
+
+.bot-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.src-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.src-dot.history {
+  background: var(--accent);
+}
+
+.src-dot.engine {
+  background: var(--accent-2);
+}
+
+.practice-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  overflow: auto;
+  color: #b9bbc0;
+}
+
+.practice-moves .on {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.result {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+
+.result.win {
+  color: var(--win);
+}
+
+.result.loss {
+  color: var(--loss);
+}
+
+.rev-row {
+  display: grid;
+  grid-template-columns: 76px 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 3px 0;
+}
+
+.rev-row .san {
+  font-weight: 600;
+}
+
+.rev-row b {
+  font-weight: 600;
+}
+
+.better {
+  color: var(--muted);
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}

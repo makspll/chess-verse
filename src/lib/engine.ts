@@ -14,9 +14,16 @@ interface Job {
   gen: number;
   fen: string;
   multipv: number;
-  depth: number;
-  onUpdate: (lines: EngineLine[]) => void;
+  options: [string, string | number | boolean][];
+  go: string;
+  onUpdate?: (lines: EngineLine[]) => void;
+  onDone?: (lines: EngineLine[], best: string) => void;
+  /** Called when a newer job (or stop) replaces this one before it finished. */
+  onCancel?: () => void;
 }
+
+/** Stockfish's own strength limiter doesn't go below this. */
+export const MIN_UCI_ELO = 1320;
 
 // Stockfish (lite, single-threaded WASM) running in a Web Worker.
 // Single-threaded because GitHub Pages can't send the COOP/COEP headers
@@ -38,19 +45,54 @@ class Engine {
     return w;
   }
 
-  analyse(fen: string, multipv: number, depth: number, onUpdate: (lines: EngineLine[]) => void) {
+  private cancelPending() {
+    const pending = this.current ?? this.waiting;
+    this.current = null;
+    this.waiting = null;
+    pending?.onCancel?.();
+  }
+
+  private run(job: Omit<Job, 'gen'>) {
     const w = this.ensure();
+    this.cancelPending();
     this.gen++;
     this.current = null;
-    this.waiting = { gen: this.gen, fen, multipv, depth, onUpdate };
+    this.waiting = { ...job, gen: this.gen };
     w.postMessage('stop');
     w.postMessage('isready');
   }
 
+  /** Full-strength analysis, streaming lines as the search deepens. */
+  analyse(fen: string, multipv: number, depth: number, onUpdate: (lines: EngineLine[]) => void) {
+    this.run({
+      fen,
+      multipv,
+      options: [['UCI_LimitStrength', false]],
+      go: `go depth ${depth}`,
+      onUpdate,
+    });
+  }
+
+  /** A strength-limited search; resolves with the engine's top lines and its chosen move. */
+  search(fen: string, opts: { multipv: number; go: string; elo?: number }): Promise<{ lines: EngineLine[]; best: string }> {
+    return new Promise((resolve, reject) => {
+      const options: Job['options'] = opts.elo
+        ? [['UCI_LimitStrength', true], ['UCI_Elo', Math.max(opts.elo, MIN_UCI_ELO)]]
+        : [['UCI_LimitStrength', false]];
+      this.run({
+        fen,
+        multipv: opts.multipv,
+        options,
+        go: opts.go,
+        onDone: (lines, best) => resolve({ lines, best }),
+        onCancel: () => reject(new Error('cancelled')),
+      });
+    });
+  }
+
   stop() {
+    this.cancelPending();
     this.gen++;
-    this.current = null;
-    this.waiting = null;
     this.worker?.postMessage('stop');
   }
 
@@ -63,12 +105,22 @@ class Engine {
       this.legal = new Set(new Chess(job.fen).moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion ?? '')));
       const w = this.worker!;
       w.postMessage(`setoption name MultiPV value ${job.multipv}`);
+      for (const [k, v] of job.options) w.postMessage(`setoption name ${k} value ${v}`);
       w.postMessage(`position fen ${job.fen}`);
-      w.postMessage(`go depth ${job.depth}`);
+      w.postMessage(job.go);
       return;
     }
     const job = this.current;
-    if (!job || job.gen !== this.gen || !line.startsWith('info ') || !line.includes(' pv ')) return;
+    if (!job || job.gen !== this.gen) return;
+
+    if (line.startsWith('bestmove')) {
+      const best = line.split(' ')[1];
+      if (!this.legal.has(best)) return;
+      this.current = null;
+      job.onDone?.(this.lines.filter(Boolean), best);
+      return;
+    }
+    if (!line.startsWith('info ') || !line.includes(' pv ')) return;
 
     const tok = line.split(' ');
     const at = (k: string) => tok.indexOf(k);
@@ -83,7 +135,7 @@ class Engine {
     if (tok[s + 1] === 'cp') l.cp = Number(tok[s + 2]) * sign;
     else if (tok[s + 1] === 'mate') l.mate = Number(tok[s + 2]) * sign;
     this.lines[multipv - 1] = l;
-    job.onUpdate(this.lines.filter(Boolean).slice(0, job.multipv));
+    job.onUpdate?.(this.lines.filter(Boolean).slice(0, job.multipv));
   }
 }
 
@@ -93,4 +145,10 @@ export function formatEval(l: EngineLine): string {
   if (l.mate !== undefined) return `${l.mate > 0 ? '' : '-'}M${Math.abs(l.mate)}`;
   const v = (l.cp ?? 0) / 100;
   return `${v > 0 ? '+' : ''}${v.toFixed(1)}`;
+}
+
+/** Centipawns from White's view, with mates mapped to large values. */
+export function evalCp(l: EngineLine): number {
+  if (l.mate !== undefined) return Math.sign(l.mate) * (10000 - Math.abs(l.mate) * 10);
+  return l.cp ?? 0;
 }
