@@ -15,10 +15,6 @@ npm install
 npm run dev
 ```
 
-## Deploy
-
-Push to `main`. `.github/workflows/deploy.yml` builds and publishes to GitHub Pages. In the repo settings, set **Pages → Source** to **GitHub Actions**.
-
 ## Credits
 
 - Pieces: cburnett set by Colin M.L. Burnett (via react-chessboard, MIT).
