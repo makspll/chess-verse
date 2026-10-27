@@ -1,5 +1,7 @@
 # Chess Multiverse
 
+![Example](image.png)
+
 Practice your openings from your own chess.com games. Everything runs in the browser, and games are stored locally in IndexedDB.
 
 - **Import**: fetches your full history from the public chess.com API. Resync only fetches months that changed since the last sync.
