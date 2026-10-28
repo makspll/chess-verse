@@ -1302,3 +1302,71 @@ input:focus {
   font-size: 11px;
   font-weight: 700;
 }
+
+/* Trend chart */
+
+.trend {
+  margin-bottom: 18px;
+}
+
+.trend-title {
+  font-size: 15px;
+  margin: 0;
+}
+
+.trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+.trend-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.trend-half {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  opacity: 0.5;
+}
+
+.trend-cursor {
+  stroke: var(--muted);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.trend-axis {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.trend-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.trend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trend-key i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.trend-empty {
+  padding: 24px 0;
+  text-align: center;
+}

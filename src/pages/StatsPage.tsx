@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { PieceIcon } from '../components/pieces';
+import { TrendChart } from '../components/TrendChart';
 import { Empty, FilterBar, Segmented, WDLBar } from '../components/ui';
 import { pct, rateColor } from '../lib/colors';
 import { sfx } from '../lib/sound';
@@ -113,6 +114,8 @@ export function StatsPage() {
         <Summary label="As White" icon="wK" t={tally(filtered.filter((g) => g.color === 'white'))} />
         <Summary label="As Black" icon="bK" t={tally(filtered.filter((g) => g.color === 'black'))} />
       </div>
+
+      <TrendChart games={filtered} allGames={games} />
 
       <div className="toolbar">
         <Segmented
