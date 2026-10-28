@@ -1370,3 +1370,85 @@ input:focus {
   padding: 24px 0;
   text-align: center;
 }
+
+/* Move quality */
+
+.quality {
+  margin-top: auto;
+  padding: 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quality + .side-foot {
+  margin-top: 0;
+}
+
+.bulk {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.badge-glyph {
+  fill: #fff;
+  font-weight: 800;
+  font-family: system-ui, sans-serif;
+}
+
+.mq {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--card-2);
+  border-left: 4px solid var(--mq);
+  flex-shrink: 0;
+}
+
+.mq-glyph {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--mq);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.rev-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: 13px;
+  max-height: 150px;
+  overflow: auto;
+}
+
+.rev-moves button {
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #b9bbc0;
+}
+
+.rev-moves button:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.rev-moves button.on {
+  background: var(--card-2);
+  color: #fff;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .quality {
+    display: none;
+  }
+}

@@ -33,6 +33,8 @@ interface Props {
   anim?: BoardAnim | null;
   /** Only pieces of this colour can be picked up (e.g. while a bot is to move). */
   allow?: Color;
+  /** Move-quality marker drawn on the corner of a square. */
+  badge?: { sq: string; color: string; glyph: string };
 }
 
 const FILES = 'abcdefgh';
@@ -81,7 +83,7 @@ function arrowGeometry(a: BoardArrow, o: Color) {
   };
 }
 
-export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, onMove, anim, allow }: Props) {
+export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, onMove, anim, allow, badge }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const pieceRefs = useRef(new Map<string, SVGGElement>());
   const [drag, setDrag] = useState<{ from: string; x: number; y: number; active: boolean; wasSelected: boolean } | null>(
@@ -309,6 +311,18 @@ export function Board({ fen, orientation, arrows, lastMove, selected, onSelect, 
           );
         })}
       </g>
+
+      {badge && (() => {
+        const [x, y] = sqXY(badge.sq, orientation);
+        return (
+          <g transform={`translate(${x + S - 20},${y + 20})`} style={{ pointerEvents: 'none' }}>
+            <circle r={19} fill={badge.color} stroke="rgba(17,18,21,0.6)" strokeWidth={3} />
+            <text y={badge.glyph.length > 1 ? 7 : 8} textAnchor="middle" className="badge-glyph" fontSize={badge.glyph.length > 1 ? 21 : 24}>
+              {badge.glyph}
+            </text>
+          </g>
+        );
+      })()}
 
       {drag?.active && (() => {
         const p = chess.get(drag.from as Square);

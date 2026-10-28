@@ -43,3 +43,12 @@ export interface Tally {
 }
 
 export const MAX_PLY = 40;
+
+/** Cached engine verdict on a position. */
+export interface PosEval {
+  /** Centipawns from White's point of view; mates are folded to large values. */
+  cp: number;
+  /** Engine's chosen move (UCI), empty for finished games. */
+  best: string;
+  depth: number;
+}

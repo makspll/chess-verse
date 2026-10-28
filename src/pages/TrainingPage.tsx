@@ -4,7 +4,11 @@ import { PieceIcon } from '../components/pieces';
 import { Practice } from '../components/Practice';
 import { TreeGraph } from '../components/TreeGraph';
 import { Empty, FilterBar, Segmented, WDLBar } from '../components/ui';
-import { moveSound, pvSan, replay, sanOf } from '../lib/chessutil';
+import { MoveQuality } from '../components/MoveQuality';
+import { CLASS_INFO } from '../lib/classify';
+import { fenAfter, fensOf, moveSound, pvSan, replay, sanOf } from '../lib/chessutil';
+import { useClassify } from '../lib/settings';
+import { useJudge } from '../lib/useJudge';
 import { ENGINE_COLOR, pct, rateColor } from '../lib/colors';
 import { engine, formatEval, type EngineLine } from '../lib/engine';
 import { sfx } from '../lib/sound';
@@ -116,6 +120,21 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
     [pool, path],
   );
   const name = useMemo(() => positionName(gamesHere), [gamesHere]);
+
+  // Quality of the move just made, for moves that exist in your games.
+  const [classify] = useClassify();
+  const fens = useMemo(() => fensOf(path), [path]);
+  const nextFens = useMemo(
+    () => children.slice(0, 5).map((c) => fenAfter(pos.fen, c.uci)).filter((f): f is string => !!f),
+    [children, pos.fen],
+  );
+  const lastUci = path.length ? path[path.length - 1] : null;
+  const judged = useJudge(
+    node && node.n > 0 && lastUci ? fens[path.length - 1] : null,
+    lastUci,
+    classify && !practice,
+    nextFens,
+  );
 
   // Engine
   useEffect(() => {
@@ -332,6 +351,7 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
               }}
               onMove={play}
               anim={anim}
+              badge={judged && lastMove ? { sq: lastMove[1], ...CLASS_INFO[judged.cls] } : undefined}
             />
           </div>
           <div className="board-nav">
@@ -381,6 +401,8 @@ export function TrainingPage({ params }: { params: URLSearchParams }) {
               ))}
             </div>
           )}
+
+          {judged && <MoveQuality j={judged} san={pos.sans[path.length - 1]} />}
 
           {view === 'graph' ? (
             <TreeGraph root={tree} path={path} color={color} onJump={jump} />

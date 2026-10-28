@@ -140,6 +140,9 @@ class Engine {
 }
 
 export const engine = new Engine();
+/** Separate workers so classification and the background job never cancel live analysis. */
+export const evalEngine = new Engine();
+export const bulkEngine = new Engine();
 
 export function formatEval(l: EngineLine): string {
   if (l.mate !== undefined) return `${l.mate > 0 ? '' : '-'}M${Math.abs(l.mate)}`;

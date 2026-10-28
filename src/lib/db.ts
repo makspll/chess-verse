@@ -1,7 +1,9 @@
-import type { Game, Profile } from './types';
+import type { Game, PosEval, Profile } from './types';
+
+type EvalRow = PosEval & { k: string };
 
 const DB_NAME = 'chess-multiverse';
-const VERSION = 1;
+const VERSION = 2;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -10,8 +12,9 @@ function open(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      db.createObjectStore('games', { keyPath: 'id' });
-      db.createObjectStore('meta');
+      if (!db.objectStoreNames.contains('games')) db.createObjectStore('games', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
+      if (!db.objectStoreNames.contains('evals')) db.createObjectStore('evals', { keyPath: 'k' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -57,6 +60,19 @@ export async function saveProfile(p: Profile): Promise<void> {
   const db = await open();
   const tx = db.transaction('meta', 'readwrite');
   tx.objectStore('meta').put(p, 'profile');
+  await done(tx);
+}
+
+export async function loadEvals(): Promise<EvalRow[]> {
+  const db = await open();
+  return result(db.transaction('evals').objectStore('evals').getAll() as IDBRequest<EvalRow[]>);
+}
+
+export async function putEvals(entries: [string, PosEval][]): Promise<void> {
+  const db = await open();
+  const tx = db.transaction('evals', 'readwrite');
+  const store = tx.objectStore('evals');
+  for (const [k, e] of entries) store.put({ k, ...e });
   await done(tx);
 }
 

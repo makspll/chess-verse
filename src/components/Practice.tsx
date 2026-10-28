@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { botMove, type BotMove, type BotSettings } from '../lib/bot';
-import { moveSound, replay, sanOf } from '../lib/chessutil';
+import { CLASS_INFO } from '../lib/classify';
+import { fensOf, moveSound, replay, sanOf } from '../lib/chessutil';
 import { pct, rateColor } from '../lib/colors';
 import { engine, MIN_UCI_ELO } from '../lib/engine';
+import { useClassify } from '../lib/settings';
 import { sfx } from '../lib/sound';
+import { useJudge } from '../lib/useJudge';
 import { moveLabel, sortedChildren, walk, winRate, type TreeNode } from '../lib/tree';
 import type { Color } from '../lib/types';
 import { Board, type BoardAnim } from './Board';
+import { MoveQuality } from './MoveQuality';
+import { Segmented } from './ui';
 
 interface Props {
   tree: TreeNode;
@@ -83,6 +88,10 @@ export function Practice({ tree, startPath, color, onExit }: Props) {
   const [anim, setAnim] = useState<BoardAnim | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [resigned, setResigned] = useState(false);
+  /** Ply shown while replaying a finished game; null follows the final position. */
+  const [viewPly, setViewPly] = useState<number | null>(null);
+  const [tab, setTab] = useState<'replay' | 'history'>('replay');
+  const [classify] = useClassify();
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
@@ -137,6 +146,7 @@ export function Practice({ tree, startPath, color, onExit }: Props) {
     engine.stop();
     sfx.back();
     setResigned(false);
+    setViewPly(null);
     setLast(null);
     setThinking(false);
     setAnim(null);
@@ -159,14 +169,52 @@ export function Practice({ tree, startPath, color, onExit }: Props) {
   const node = walk(tree, path);
   const inHistory = !!node && node.n > 0;
   const rev = useMemo(() => (over ? review(tree, path, startPath.length, color) : null), [over, tree, path, startPath, color]);
-  const lastMove = path.length ? ([path[path.length - 1].slice(0, 2), path[path.length - 1].slice(2, 4)] as [string, string]) : undefined;
+  const fens = useMemo(() => fensOf(path), [path]);
+  // While replaying a finished game, the board follows the chosen ply instead of the live position.
+  const ply = over ? Math.min(viewPly ?? path.length, path.length) : path.length;
+  const shownFen = over ? fens[ply] : pos.fen;
+  const shownUci = ply > 0 ? path[ply - 1] : null;
+  const lastMove = shownUci ? ([shownUci.slice(0, 2), shownUci.slice(2, 4)] as [string, string]) : undefined;
+  const nearby = useMemo(
+    () => [ply + 1, ply - 2, ply + 2, ply + 3, ply - 3].filter((i) => i >= 0 && i < fens.length).map((i) => fens[i]),
+    [ply, fens],
+  );
+  const judged = useJudge(over && shownUci ? fens[ply - 1] : null, over ? shownUci : null, classify && !!over, nearby);
+
+  const step = (to: number) => {
+    const next = Math.max(0, Math.min(path.length, to));
+    if (next === ply) return;
+    if (next === ply + 1) {
+      const uci = path[ply];
+      moveSound(sanOf(fens[ply], uci));
+      setAnim({ from: uci.slice(0, 2), to: uci.slice(2, 4) });
+    } else {
+      sfx.select();
+      setAnim(null);
+    }
+    setViewPly(next);
+  };
+
+  useEffect(() => {
+    if (!over) return;
+    const on = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') step(ply - 1);
+      else if (e.key === 'ArrowRight') step(ply + 1);
+      else if (e.key === 'Home') step(0);
+      else if (e.key === 'End') step(path.length);
+      else return;
+      e.preventDefault();
+    };
+    addEventListener('keydown', on);
+    return () => removeEventListener('keydown', on);
+  });
 
   return (
     <div className="arena">
       <div className="board-col">
         <div className="board-box">
           <Board
-            fen={pos.fen}
+            fen={shownFen}
             orientation={color}
             arrows={[]}
             lastMove={lastMove}
@@ -175,9 +223,10 @@ export function Practice({ tree, startPath, color, onExit }: Props) {
               if (sq) sfx.select();
               setSelected(sq);
             }}
-            onMove={push}
+            onMove={over ? () => {} : push}
             anim={anim}
             allow={over ? undefined : color}
+            badge={judged && lastMove ? { sq: lastMove[1], ...CLASS_INFO[judged.cls] } : undefined}
           />
         </div>
         <div className="board-nav">
@@ -185,13 +234,30 @@ export function Practice({ tree, startPath, color, onExit }: Props) {
             {over ? over.reason : botTurn ? 'Bot is thinking…' : 'Your move'}
           </span>
           <div className="grow" />
-          <button className="btn small" onClick={takeBack} disabled={path.length <= startPath.length || thinking}>
-            Take back
-          </button>
-          {!over && (
-            <button className="btn small" onClick={() => setResigned(true)}>
-              Resign
-            </button>
+          {over ? (
+            <>
+              <button className="icon-btn" onClick={() => step(0)} title="Start (Home)" disabled={ply === 0}>
+                <svg viewBox="0 0 24 24"><path d="M6 5v14M19 5l-9 7 9 7z" /></svg>
+              </button>
+              <button className="icon-btn" onClick={() => step(ply - 1)} title="Back (←)" disabled={ply === 0}>
+                <svg viewBox="0 0 24 24"><path d="M16 5l-9 7 9 7z" /></svg>
+              </button>
+              <button className="icon-btn" onClick={() => step(ply + 1)} title="Forward (→)" disabled={ply === path.length}>
+                <svg viewBox="0 0 24 24"><path d="M8 5l9 7-9 7z" /></svg>
+              </button>
+              <button className="icon-btn" onClick={() => step(path.length)} title="End" disabled={ply === path.length}>
+                <svg viewBox="0 0 24 24"><path d="M18 5v14M5 5l9 7-9 7z" /></svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn small" onClick={takeBack} disabled={path.length <= startPath.length || thinking}>
+                Take back
+              </button>
+              <button className="btn small" onClick={() => setResigned(true)}>
+                Resign
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -256,8 +322,29 @@ export function Practice({ tree, startPath, color, onExit }: Props) {
               {over.result === 'win' ? 'You won' : over.result === 'loss' ? 'You lost' : 'Draw'}
               <span className="muted small"> · {over.reason}</span>
             </div>
-            {rev.rows.length > 0 && <div className="muted small">Your moves vs. your history</div>}
-            {rev.rows.map((r) => (
+            <Segmented
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'replay', label: 'Replay' },
+                { value: 'history', label: 'Vs. history' },
+              ]}
+            />
+            {tab === 'replay' && (
+              <>
+                <div className="rev-moves">
+                  {pos.sans.map((sn, i) => (
+                    <button key={i} className={i + 1 === ply ? 'on' : ''} onClick={() => step(i + 1)}>
+                      {i % 2 === 0 ? moveLabel(i + 1, sn) : sn}
+                    </button>
+                  ))}
+                </div>
+                {judged && shownUci && <MoveQuality j={judged} san={pos.sans[ply - 1]} />}
+                {classify && ply > 0 && !judged && <div className="muted small">Analysing this move…</div>}
+              </>
+            )}
+            {tab === 'history' && rev.rows.length > 0 && <div className="muted small">Your moves vs. your history</div>}
+            {tab === 'history' && rev.rows.map((r) => (
               <div key={r.ply} className="rev-row">
                 <span className="san">{moveLabel(r.ply, r.san)}</span>
                 <span className="small">
@@ -280,7 +367,7 @@ export function Practice({ tree, startPath, color, onExit }: Props) {
                 )}
               </div>
             ))}
-            {rev.leftAt !== null && rev.leftAt > startPath.length && (
+            {tab === 'history' && rev.leftAt !== null && rev.leftAt > startPath.length && (
               <div className="muted small">
                 Left your games after {moveLabel(rev.leftAt, rev.sans[rev.leftAt - 1])}.
               </div>

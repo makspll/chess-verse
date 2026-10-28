@@ -29,6 +29,31 @@ export function sanOf(fen: string, uci: string): string {
   }
 }
 
+export function fenAfter(fen: string, uci: string): string | null {
+  try {
+    const c = new Chess(fen);
+    apply(c, uci);
+    return c.fen();
+  } catch {
+    return null;
+  }
+}
+
+/** FEN before the first move and after each move of the path. */
+export function fensOf(path: string[]): string[] {
+  const chess = new Chess();
+  const out = [chess.fen()];
+  for (const uci of path) {
+    try {
+      apply(chess, uci);
+    } catch {
+      break;
+    }
+    out.push(chess.fen());
+  }
+  return out;
+}
+
 export function pvSan(fen: string, pv: string[], max = 6): string {
   const c = new Chess(fen);
   const out: string[] = [];

@@ -1,4 +1,6 @@
 import { useState, type ReactElement } from 'react';
+import { setBulkPaused, useBulkAnalysis, useBulkStatus } from './lib/bulk';
+import { useClassify } from './lib/settings';
 import { isMuted, setMuted, sfx } from './lib/sound';
 import { ImportPage } from './pages/ImportPage';
 import { StatsPage } from './pages/StatsPage';
@@ -47,6 +49,9 @@ export function App() {
   const route = useRoute();
   const [muted, setMutedState] = useState(isMuted());
   const page: Page = route.page ?? (games.length ? 'train' : 'import');
+  const [classify, setClassify] = useClassify();
+  const bulk = useBulkStatus();
+  useBulkAnalysis(games, classify);
 
   return (
     <div className="shell">
@@ -66,6 +71,28 @@ export function App() {
             <span>{n.label}</span>
           </a>
         ))}
+        <div className="quality">
+          <button
+            className={'tool' + (classify ? ' on' : '')}
+            onClick={() => {
+              sfx.select();
+              setClassify(!classify);
+            }}
+            title="Rate each move as engine move, good, normal, bad or very bad"
+          >
+            Move quality: {classify ? 'on' : 'off'}
+          </button>
+          {classify && bulk.running && (
+            <div className="muted small bulk">
+              <span>
+                Pre-analysing {bulk.done.toLocaleString()} / {bulk.total.toLocaleString()}
+              </span>
+              <button className="link" onClick={() => setBulkPaused(!bulk.paused)}>
+                {bulk.paused ? 'Resume' : 'Pause'}
+              </button>
+            </div>
+          )}
+        </div>
         <div className="side-foot">
           {profile && (
             <div className="who" title={profile.username}>
